@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiplayer Game Hub</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        :root {
+            --primary: #8a2be2;
+            --secondary: #ff00ff;
+            --dark: #121212;
+            --darker: #0a0a0a;
+            --light: #f0f0f0;
+            --success: #00ff7f;
+            --danger: #ff5555;
+            --warning: #ffaa00;
+            --info: #00ccff;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--darker), var(--dark));
+            color: var(--light);
+            min-height: 100vh;
+            overflow-x: hidden;
+            background-attachment: fixed;
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+        }
+        
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        
+        .logo {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 15px rgba(138, 43, 226, 0.5);
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: var(--info);
+            font-size: 1.2rem;
+            opacity: 0.8;
+        }
+        
+        .section {
+            background: rgba(25, 25, 35, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .section-title {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            color: var(--primary);
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .section-title i {
+            font-size: 1.5rem;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(138, 43, 226, 0.6);
+        }
+        
+        .btn:active {
+            transform: translateY(1px);
+        }
+        
+        .btn-lg {
+            padding: 15px 40px;
+            font-size: 1.2rem;
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .btn-success {
+            background: linear-gradient(45deg, var(--success), #00cc66);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(45deg, var(--danger), #ff3333);
+        }
+        
+        .game-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .game-card {
+            background: rgba(40, 40, 60, 0.7);
+            border-radius: 15px;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+            position: relative;
+            border: 1px solid rgba(138, 43, 226, 0.3);
+        }
+        
+        .game-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--primary);
+        }
+        
+        .game-icon {
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3.5rem;
+            background: rgba(0, 0, 0, 0.3);
+        }
+        
+        .game-info {
+            padding: 20px;
+        }
+        
+        .game-title {
+            font-size: 1.4rem;
+            margin-bottom: 10px;
+            color: var(--info);
+        }
+        
+        .game-desc {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        
+        .player-cards {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 30px 0;
+        }
+        
+        .player-card {
+            background: rgba(50, 50, 70, 0.8);
+            border-radius: 15px;
+            padding: 20px;
+            width: 220px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .player-card.active {
+            border-color: var(--success);
+            box-shadow: 0 0 20px rgba(0, 255, 127, 0.3);
+        }
+        
+        .player-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+        
+        .player-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .player-score {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--success);
+            margin: 10px 0;
+        }
+        
+        .vs-text {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--warning);
+        }
+        
+        .game-area {
+            background: rgba(30, 30, 40, 0.9);
+            border-radius: 15px;
+            padding: 30px;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .game-question {
+            font-size: 1.8rem;
+            text-align: center;
+            margin-bottom: 30px;
+            color: var(--info);
+            max-width: 90%;
+        }
+        
+        .game-input {
+            width: 100%;
+            max-width: 500px;
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid var(--primary);
+            border-radius: 50px;
+            color: white;
+            font-size: 1.2rem;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .game-input:focus {
+            outline: none;
+            border-color: var(--secondary);
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+        }
+        
+        .timer {
+            font-size: 3rem;
+            font-weight: 800;
+            margin: 20px 0;
+            color: var(--warning);
+            text-shadow: 0 0 10px rgba(255, 170, 0, 0.5);
+        }
+        
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+        
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 5px solid rgba(255, 255, 255, 0.1);
+            border-top: 5px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            font-size: 1.5rem;
+            text-align: center;
+            color: var(--info);
+        }
+        
+        .result-screen {
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .result-title {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+        
+        .winner {
+            color: var(--success);
+            font-size: 3rem;
+            margin: 20px 0;
+            text-shadow: 0 0 15px rgba(0, 255, 127, 0.5);
+        }
+        
+        .firework {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: var(--warning);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--warning), 0 0 20px var(--warning);
+            animation: firework 1s ease-out forwards;
+        }
+        
+        @keyframes firework {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-100px); opacity: 0; }
+        }
+        
+        .room-code {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .code-display {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px 25px;
+            border-radius: 50px;
+            font-size: 1.5rem;
+            letter-spacing: 3px;
+            font-weight: 700;
+            border: 2px solid var(--primary);
+        }
+        
+        .social-icons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .social-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .social-icon:hover {
+            background: var(--primary);
+            transform: translateY(-5px);
+        }
+        
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.5rem;
+            z-index: 100;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        footer {
+            text-align: center;
+            padding: 30px 0 20px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .player-cards {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .vs-text {
+                margin: 20px 0;
+            }
+            
+            .game-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .logo {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Theme Toggle -->
+    <div class="theme-toggle">
+        <i class="fas fa-moon"></i>
+    </div>
+
+    <div class="container">
+        <header>
+            <div class="logo">Multiplayer Game Hub</div>
+            <div class="subtitle">Real-time competitive gaming with friends</div>
+        </header>
+
+        <!-- Game Selection Section -->
+        <div class="section">
+            <h2 class="section-title"><i class="fas fa-gamepad"></i> Select Game Mode</h2>
+            <div class="text-center">
+                <button class="btn btn-lg" id="randomMatchBtn">
+                    <i class="fas fa-random"></i> Random Match
+                </button>
+                <button class="btn btn-lg btn-secondary" id="friendMatchBtn">
+                    <i class="fas fa-user-friends"></i> Play with Friend
+                </button>
+            </div>
+        </div>
+
+        <!-- Game Selection -->
+        <div class="section">
+            <h2 class="section-title"><i class="fas fa-chess"></i> Choose Your Game</h2>
+            <div class="game-cards">
+                <div class="game-card" data-game="quiz">
+                    <div class="game-icon">
+                        <i class="fas fa-question-circle"></i>
+                    </div>
+                    <div class="game-info">
+                        <h3 class="game-title">Quiz Battle</h3>
+                        <p class="game-desc">Test your knowledge against opponents in a fast-paced trivia challenge.</p>
+                    </div>
+                </div>
+                <div class="game-card" data-game="typing">
+                    <div class="game-icon">
+                        <i class="fas fa-keyboard"></i>
+                    </div>
+                    <div class="game-info">
+                        <h3 class="game-title">Typing Race</h3>
+                        <p class="game-desc">Race against opponents by typing words as fast and accurately as possible.</p>
+                    </div>
+                </div>
+                <div class="game-card" data-game="iq">
+                    <div class="game-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <div class="game-info">
+                        <h3 class="game-title">IQ Tester</h3>
+                        <p class="game-desc">Solve logic puzzles and brain teasers against the clock.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Waiting Room -->
+        <div class="section" id="waitingSection" style="display: none;">
+            <h2 class="section-title"><i class="fas fa-hourglass-half"></i> Waiting for Opponent</h2>
+            <div class="loading">
+                <div class="spinner"></div>
+                <div class="loading-text">Searching for players...</div>
+                <div class="room-code">
+                    <div>Room Code:</div>
+                    <div class="code-display">A7B3C9</div>
+                    <button class="btn" id="copyCodeBtn">
+                        <i class="fas fa-copy"></i> Copy
+                    </button>
+                </div>
+                <div style="margin-top: 20px;">
+                    <button class="btn btn-danger" id="cancelBtn">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Room -->
+        <div class="section" id="gameSection" style="display: none;">
+            <h2 class="section-title"><i class="fas fa-fire"></i> Game in Progress</h2>
+            
+            <div class="player-cards">
+                <div class="player-card active">
+                    <div class="player-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <h3 class="player-name">You</h3>
+                    <div>Score:</div>
+                    <div class="player-score">0</div>
+                </div>
+                
+                <div class="vs-text">VS</div>
+                
+                <div class="player-card">
+                    <div class="player-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h3 class="player-name">Opponent</h3>
+                    <div>Score:</div>
+                    <div class="player-score">0</div>
+                </div>
+            </div>
+            
+            <div class="game-area">
+                <div class="timer">30</div>
+                <div class="game-question">What is the capital city of France?</div>
+                <input type="text" class="game-input" placeholder="Type your answer here...">
+                <div style="margin-top: 20px;">
+                    <button class="btn btn-success">
+                        <i class="fas fa-paper-plane"></i> Submit Answer
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div class="section" id="resultsSection" style="display: none;">
+            <div class="result-screen">
+                <h2 class="result-title">Game Over</h2>
+                <div class="winner">You Win!</div>
+                <div style="font-size: 1.5rem; margin: 20px 0;">
+                    Final Score: <span style="color: var(--success); font-weight: 800;">8</span> - 
+                    <span style="color: var(--danger); font-weight: 800;">5</span>
+                </div>
+                <div style="margin: 30px 0;">
+                    <button class="btn btn-lg" style="margin-right: 15px;">
+                        <i class="fas fa-redo"></i> Play Again
+                    </button>
+                    <button class="btn btn-lg btn-secondary">
+                        <i class="fas fa-home"></i> Main Menu
+                    </button>
+                </div>
+                
+                <div class="social-icons">
+                    <div class="social-icon">
+                        <i class="fab fa-facebook-f"></i>
+                    </div>
+                    <div class="social-icon">
+                        <i class="fab fa-twitter"></i>
+                    </div>
+                    <div class="social-icon">
+                        <i class="fab fa-whatsapp"></i>
+                    </div>
+                    <div class="social-icon">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <p>Real-time Multiplayer Game Hub +//3//f/9//3//f/9//3//f/9 Powered by Firebase +//3//f/9//3//f/9//3//f/9 All rights reserved</p>
+    </footer>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDpzGq0iH1G8k2t6G7Vd2eTg8lJcMfH3s4",
+            authDomain: "multiplayer-game-hub.firebaseapp.com",
+            databaseURL: "https://multiplayer-game-hub-default-rtdb.firebaseio.com",
+            projectId: "multiplayer-game-hub",
+            storageBucket: "multiplayer-game-hub.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:abcd1234efgh5678ijkl90"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // DOM Elements
+        const gameCards = document.querySelectorAll('.game-card');
+        const randomMatchBtn = document.getElementById('randomMatchBtn');
+        const friendMatchBtn = document.getElementById('friendMatchBtn');
+        const waitingSection = document.getElementById('waitingSection');
+        const gameSection = document.getElementById('gameSection');
+        const resultsSection = document.getElementById('resultsSection');
+        const copyCodeBtn = document.getElementById('copyCodeBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const themeToggle = document.querySelector('.theme-toggle');
+
+        // Game state variables
+        let selectedGame = null;
+        let currentScreen = 'selection';
+        let playerScore = 0;
+        let opponentScore = 0;
+        let gameTimer = 30;
+
+        // Game selection
+        gameCards.forEach(card => {
+            card.addEventListener('click', () => {
+                // Remove active class from all cards
+                gameCards.forEach(c => c.classList.remove('active'));
+                
+                // Add active class to selected card
+                card.classList.add('active');
+                
+                // Store selected game
+                selectedGame = card.dataset.game;
+                
+                // Enable match buttons
+                randomMatchBtn.disabled = false;
+                friendMatchBtn.disabled = false;
+            });
+        });
+
+        // Matchmaking
+        randomMatchBtn.addEventListener('click', () => {
+            if (!selectedGame) {
+                alert('Please select a game first!');
+                return;
+            }
+            
+            showScreen('waiting');
+            simulateMatchmaking();
+        });
+
+        friendMatchBtn.addEventListener('click', () => {
+            if (!selectedGame) {
+                alert('Please select a game first!');
+                return;
+            }
+            
+            showScreen('waiting');
+        });
+
+        // Copy room code
+        copyCodeBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText('A7B3C9');
+            copyCodeBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+            setTimeout(() => {
+                copyCodeBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+            }, 2000);
+        });
+
+        // Cancel matchmaking
+        cancelBtn.addEventListener('click', () => {
+            showScreen('selection');
+        });
+
+        // Theme toggle
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('light-theme');
+            const icon = themeToggle.querySelector('i');
+            if (document.body.classList.contains('light-theme')) {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            } else {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            }
+        });
+
+        // Show screen function
+        function showScreen(screen) {
+            // Hide all sections
+            waitingSection.style.display = 'none';
+            gameSection.style.display = 'none';
+            resultsSection.style.display = 'none';
+            
+            // Show requested screen
+            if (screen === 'waiting') {
+                waitingSection.style.display = 'block';
+            } else if (screen === 'game') {
+                gameSection.style.display = 'block';
+                startGame();
+            } else if (screen === 'results') {
+                resultsSection.style.display = 'block';
+                showFireworks();
+            }
+        }
+
+        // Simulate matchmaking process
+        function simulateMatchmaking() {
+            setTimeout(() => {
+                showScreen('game');
+            }, 3000);
+        }
+
+        // Start the game
+        function startGame() {
+            playerScore = 0;
+            opponentScore = 0;
+            updateScores();
+            
+            // Start the game timer
+            startTimer();
+            
+            // Generate first question
+            generateQuestion();
+        }
+
+        // Update score displays
+        function updateScores() {
+            document.querySelector('.player-card.active .player-score').textContent = playerScore;
+            document.querySelector('.player-card:not(.active) .player-score').textContent = opponentScore;
+        }
+
+        // Start the game timer
+        function startTimer() {
+            gameTimer = 30;
+            const timerElement = document.querySelector('.timer');
+            timerElement.textContent = gameTimer;
+            
+            const timerInterval = setInterval(() => {
+                gameTimer--;
+                timerElement.textContent = gameTimer;
+                
+                if (gameTimer <= 0) {
+                    clearInterval(timerInterval);
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        // Generate a new question
+        function generateQuestion() {
+            const questionElement = document.querySelector('.game-question');
+            const games = {
+                quiz: [
+                    "What is the capital of Australia?",
+                    "Which planet is known as the Red Planet?",
+                    "Who wrote 'Romeo and Juliet'?",
+                    "What is the largest mammal in the world?",
+                    "How many elements are in the periodic table?"
+                ],
+                typing: [
+                    "supercalifragilisticexpialidocious",
+                    "pneumonoultramicroscopicsilicovolcanoconiosis",
+                    "floccinaucinihilipilification",
+                    "antidisestablishmentarianism",
+                    "honorificabilitudinitatibus"
+                ],
+                iq: [
+                    "If 2 people build 2 houses in 2 days, how many days will it take 6 people to build 6 houses?",
+                    "What number should replace the question mark? 2, 4, 8, 16, ?",
+                    "If all Bloops are Razzies and all Razzies are Loppies, are all Bloops Loppies?",
+                    "Which one does not belong: Apple, Banana, Carrot, Date?",
+                    "A bat and a ball cost $1.10 together. The bat costs $1.00 more than the ball. How much does the ball cost?"
+                ]
+            };
+            
+            const questions = games[selectedGame];
+            const randomIndex = Math.floor(Math.random() * questions.length);
+            questionElement.textContent = questions[randomIndex];
+        }
+
+        // End the game and show results
+        function endGame() {
+            // Determine winner
+            const winner = playerScore > opponentScore ? "You Win!" : 
+                          playerScore < opponentScore ? "Opponent Wins!" : "It's a Tie!";
+            
+            document.querySelector('.winner').textContent = winner;
+            showScreen('results');
+        }
+
+        // Create fireworks effect
+        function showFireworks() {
+            const resultsScreen = document.querySelector('.result-screen');
+            for (let i = 0; i < 50; i) {
+                setTimeout(() => {
+                    const firework = document.createElement('div');
+                    firework.classList.add('firework');
+                    firework.style.left = `${Math.random() * 100}%`;
+                    firework.style.top = `${80 Math.random() * 20}%`;
+                    firework.style.animationDuration = `${0.5 Math.random() * 1}s`;
+                    firework.style.backgroundColor = getRandomColor();
+                    
+                    resultsScreen.appendChild(firework);
+                    
+                    // Remove firework after animation
+                    setTimeout(() => {
+                        firework.remove();
+                    }, 1000);
+                }, i * 100);
+            }
+        }
+
+        // Get random color for fireworks
+        function getRandomColor() {
+            const colors = [
+                '#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'
+            ];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        // Simulate opponent playing
+        function simulateOpponent() {
+            setInterval(() => {
+                if (Math.random() > 0.7 && gameTimer > 0) {
+                    opponentScore;
+                    updateScores();
+                }
+            }, 2000);
+        }
+
+        // Initialize opponent simulation
+        simulateOpponent();
+
+        // Handle answer submission
+        document.querySelector('.game-area .btn').addEventListener('click', () => {
+            playerScore;
+            updateScores();
+            document.querySelector('.game-input').value = '';
+            generateQuestion();
+        });
+
+        // Initialize game
+        document.querySelectorAll('.btn')[0].click();
+    </script>
+</body>
+</html>
